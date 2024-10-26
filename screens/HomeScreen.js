@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from "react-native";
 import React, { useEffect, useContext, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
@@ -22,10 +22,6 @@ const HomeScreen = () => {
     fetchUsers();
   }, []);
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       fetchPosts();
@@ -37,7 +33,7 @@ const HomeScreen = () => {
       const response = await axios.get("http://192.168.1.5:3000/get-posts");
       setPosts(response.data);
     } catch (error) {
-      console.log("error fetching posts", error);
+      console.log("Error fetching posts", error);
     }
   };
 
@@ -47,8 +43,8 @@ const HomeScreen = () => {
         `http://192.168.1.5:3000/posts/${postId}/${userId}/like`
       );
       const updatedPost = response.data;
-      const updatedPosts = posts?.map((post) =>
-        post?._id === updatedPost._id ? updatedPost : post
+      const updatedPosts = posts.map((post) =>
+        post._id === updatedPost._id ? updatedPost : post
       );
 
       setPosts(updatedPosts);
@@ -73,8 +69,47 @@ const HomeScreen = () => {
     }
   };
 
+  const renderPost = ({ item }) => (
+    <View key={item._id} style={styles.postCard}>
+      <View style={styles.postHeader}>
+        <Image
+          style={styles.avatar}
+          source={{
+            uri: "https://cdn-icons-png.flaticon.com/128/149/149071.png",
+          }}
+        />
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{item.user.name}</Text>
+          <Text style={styles.postDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.postContent}>{item.content}</Text>
+
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity onPress={() => item.likes.includes(userId) ? handleDislike(item._id) : handleLike(item._id)}>
+          {item.likes.includes(userId) ? (
+            <AntDesign name="heart" size={20} color="red" />
+          ) : (
+            <AntDesign name="hearto" size={20} color="black" />
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <FontAwesome name="comment-o" size={20} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="share-social-outline" size={20} color="black" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.likesReplies}>
+        {item.likes.length} likes • {item.replies.length} replies
+      </Text>
+    </View>
+  );
+
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Image
           style={styles.logo}
@@ -84,45 +119,13 @@ const HomeScreen = () => {
         />
       </View>
 
-      <View style={styles.postsContainer}>
-        {posts?.map((post) => (
-          <View key={post._id} style={styles.postCard}>
-            <View style={styles.postHeader}>
-              <Image
-                style={styles.avatar}
-                source={{
-                  uri: "https://cdn-icons-png.flaticon.com/128/149/149071.png",
-                }}
-              />
-              <View>
-                <Text style={styles.userName}>{post?.user?.name}</Text>
-                <Text style={styles.postContent}>{post?.content}</Text>
-              </View>
-            </View>
-
-            <View style={styles.actionsContainer}>
-              <TouchableOpacity onPress={() => post?.likes?.includes(userId) ? handleDislike(post?._id) : handleLike(post?._id)}>
-                {post?.likes?.includes(userId) ? (
-                  <AntDesign name="heart" size={18} color="red" />
-                ) : (
-                  <AntDesign name="hearto" size={18} color="black" />
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <FontAwesome name="comment-o" size={18} color="black" />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Ionicons name="share-social-outline" size={18} color="black" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.likesReplies}>
-              {post?.likes?.length} likes • {post?.replies?.length} replies
-            </Text>
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+      <FlatList
+        data={posts}
+        renderItem={renderPost}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.postsContainer}
+      />
+    </View>
   );
 };
 
@@ -132,7 +135,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8F8F8",
-    paddingTop: 20,
+    paddingTop: 40,
   },
   logoContainer: {
     alignItems: "center",
@@ -144,13 +147,13 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   postsContainer: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
   },
   postCard: {
     backgroundColor: "white",
     padding: 15,
     borderRadius: 10,
-    elevation: 3,
+    elevation: 2,
     marginVertical: 10,
     shadowColor: "#000",
     shadowOffset: {
@@ -166,30 +169,37 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    marginRight: 15,
+  },
+  userInfo: {
+    flex: 1,
   },
   userName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 4,
     color: "#333",
+  },
+  postDate: {
+    fontSize: 12,
+    color: "#888",
   },
   postContent: {
     fontSize: 14,
     color: "#666",
-    lineHeight: 18,
+    lineHeight: 20,
+    marginBottom: 10,
   },
   actionsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    justifyContent: "space-between",
     marginTop: 10,
   },
   likesReplies: {
-    marginTop: 7,
+    marginTop: 5,
     color: "gray",
     fontSize: 12,
   },
